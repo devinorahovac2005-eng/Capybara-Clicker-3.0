@@ -1,0 +1,816 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capybara Empire - Idle Game</title>
+<style>
+:root {
+  --bg:#0c1218;--panel:#151f29;--card:#1c2b37;--border:#304454;
+  --text:#edf4f5;--muted:#9fb2bf;--green:#75e0b0;--gold:#ffd477;
+  --blue:#80baff;--red:#ff8989;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:11px 13px;background:var(--green);color:#10231c;font-weight:750;touch-action:manipulation}
+button:disabled{opacity:.35;cursor:not-allowed}
+button:active{transform:scale(.98)}
+header{padding:22px 16px;background:linear-gradient(120deg,#173c36,#192c45);border-bottom:1px solid var(--border)}
+header h1{margin:0;color:var(--green);font-size:clamp(24px,5vw,36px)}
+header p{margin:5px 0 0;color:var(--muted)}
+main{max-width:1100px;margin:auto;padding:14px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.stat{background:#0f1921;border:1px solid var(--border);border-radius:12px;padding:11px;min-width:0}
+.stat span{font-size:12px;color:var(--muted);display:block}
+.stat strong{font-size:clamp(17px,3vw,23px);display:block;color:var(--gold);overflow-wrap:anywhere;margin-top:4px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+h2{font-size:20px;margin:0 0 12px;color:var(--green)}
+h3{font-size:15px;margin:0}
+p{line-height:1.5}
+.muted{font-size:13px;color:var(--muted);line-height:1.55}
+.topbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:14px}
+.nav button{background:#1b2b37;color:var(--muted);border:1px solid var(--border);font-size:13px;padding:11px 5px}
+.nav button.active{background:var(--green);color:#10231c}
+.view{display:none}.view.active{display:block}
+.capy-wrap{text-align:center;padding:20px 0 6px}
+#capyButton{background:transparent;padding:0;display:block;margin:auto}
+.capy{position:relative;width:220px;height:165px;display:block;transition:transform .1s}
+#capyButton:active .capy{transform:scale(.94) rotate(-2deg)}
+.body-shape{position:absolute;width:158px;height:91px;left:25px;bottom:14px;background:#a9784c;border-radius:48% 48% 36% 38%;border-bottom:7px solid #805634}
+.head-shape{position:absolute;width:105px;height:84px;right:4px;top:22px;background:#bd8a5a;border-radius:44% 48% 35% 42%;border-bottom:5px solid #95663f;z-index:2}
+.ear{position:absolute;top:-8px;width:24px;height:25px;border:4px solid #bd8a5a;background:#94613e;border-radius:50%}
+.ear.a{left:14px}.ear.b{right:14px}
+.eye{position:absolute;top:25px;width:9px;height:11px;background:#171713;border-radius:50%}
+.eye.a{left:25px}.eye.b{right:23px}
+.snout{position:absolute;width:46px;height:31px;right:-5px;top:44px;background:#d2a174;border-radius:45%}
+.nose{position:absolute;width:15px;height:10px;right:-3px;top:48px;background:#34251c;border-radius:50%}
+.leg{position:absolute;width:24px;height:31px;bottom:0;background:#855a3a;border-radius:8px}
+.leg.a{left:52px}.leg.b{left:139px}
+.shadow{width:170px;height:12px;background:#000;opacity:.35;border-radius:50%;margin:auto}
+#message{color:var(--gold);min-height:24px;margin:12px 0}
+.primary{width:100%}
+.secondary{background:#243847;color:var(--text);border:1px solid var(--border)}
+.danger{background:#582c34;color:#ffe4e4}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.item{border:1px solid var(--border);background:var(--card);padding:13px;border-radius:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.item p{font-size:12px;color:var(--muted);margin:0;flex:1;line-height:1.5}
+.item .cost{font-size:13px;color:var(--gold);font-weight:750}
+.item .owned{font-size:12px;color:var(--green)}
+.item button{font-size:12px;padding:10px 6px}
+.pill{font-size:11px;padding:4px 7px;border-radius:20px;background:#304454;color:var(--muted);display:inline-block;width:fit-content}
+.pill.good{color:var(--green)}
+.progress{height:9px;border-radius:20px;background:#0c141b;overflow:hidden;margin:8px 0}
+.progress div{height:100%;width:0;background:var(--green)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.world-card.selected,.skin-card.selected{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
+#toast{color:var(--gold);font-size:13px;min-height:18px}
+.small{font-size:12px;color:var(--muted)}
+hr{border:0;border-top:1px solid var(--border);margin:14px 0}
+input{font:inherit;background:#0f1921;color:white;border:1px solid var(--border);padding:11px;border-radius:9px;width:100%}
+@media(max-width:540px){
+ main{padding:10px}.panel{padding:12px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .grid{grid-template-columns:1fr}.nav{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .nav button{font-size:12px}.capy{transform:scale(.93)}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>CAPYBARA EMPIRE</h1>
+  <p>Vom kleinen Capybara zum Herrscher des Universums.</p>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="topbar">
+      <div>
+        <span class="pill good" id="worldLabel">Wiese</span>
+        <span class="pill" id="skinLabel">Normales Capybara</span>
+      </div>
+      <div class="small" id="saveStatus">Spielstand lokal</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span>Geld</span><strong id="money">0</strong></div>
+      <div class="stat"><span>Geld pro Klick</span><strong id="clickPower">1</strong></div>
+      <div class="stat"><span>Geld pro Sekunde</span><strong id="income">0</strong></div>
+      <div class="stat"><span>Kristalle</span><strong id="crystals">0</strong></div>
+      <div class="stat"><span>Rebirths</span><strong id="rebirths">0</strong></div>
+      <div class="stat"><span>Insgesamt verdient</span><strong id="total">0</strong></div>
+    </div>
+  </section>
+
+  <nav class="nav" aria-label="Spielmenüs">
+    <button class="active" data-view="home">Hauptspiel</button>
+    <button data-view="shop">Upgrade-Shop</button>
+    <button data-view="factory">Fabriken</button>
+    <button data-view="research">Forschung</button>
+    <button data-view="collection">Sammlung</button>
+    <button data-view="missions">Missionen</button>
+  </nav>
+
+  <section class="view active" id="home">
+    <div class="panel">
+      <div class="row">
+        <h2>Dein Capybara</h2>
+        <span class="pill" id="boostLabel">Kein Boost aktiv</span>
+      </div>
+      <div class="capy-wrap">
+        <button id="capyButton" aria-label="Capybara anklicken">
+          <span class="capy">
+            <span class="body-shape"></span>
+            <span class="leg a"></span><span class="leg b"></span>
+            <span class="head-shape">
+              <span class="ear a"></span><span class="ear b"></span>
+              <span class="eye a"></span><span class="eye b"></span>
+              <span class="snout"></span><span class="nose"></span>
+            </span>
+          </span>
+          <span class="shadow"></span>
+        </button>
+        <div id="message">Klicke auf dein Capybara, um Geld zu verdienen.</div>
+        <p class="muted">Dein Imperium wächst mit jedem Klick und jeder Fabrik.</p>
+      </div>
+      <div class="grid">
+        <button onclick="feed()" id="feedButton">Karotte: 50 Geld</button>
+        <button class="secondary" onclick="startChallenge()" id="challengeButton">Herausforderung starten</button>
+      </div>
+      <div id="challengeInfo" class="muted">Herausforderungen bringen einmalige Kristall- und Geldbelohnungen.</div>
+    </div>
+
+    <div class="panel">
+      <h2>Rebirth & Kristalle</h2>
+      <p class="muted">Setze dein normales Geld und deine normalen Upgrades zurück. Du erhältst Kristalle für deinen Fortschritt. Forschung, Skins und freigeschaltete Welten bleiben erhalten.</p>
+      <div class="stat">
+        <span>Geschätzte Kristalle bei Rebirth</span>
+        <strong id="crystalGain">0</strong>
+      </div>
+      <div class="progress"><div id="rebirthProgress"></div></div>
+      <p class="muted" id="rebirthHint"></p>
+      <button class="primary" id="rebirthButton" onclick="rebirth()">Rebirth durchführen</button>
+    </div>
+
+    <div class="panel">
+      <h2>Weltenreise</h2>
+      <p class="muted" id="worldHint">Verdiene Geld, um neue Welten freizuschalten.</p>
+      <div class="grid" id="worldQuick"></div>
+    </div>
+  </section>
+
+  <section class="view" id="shop">
+    <div class="panel">
+      <h2>Manuelle Upgrades</h2>
+      <p class="muted">Jeder Kauf kostet denselben festen Preis und erhöht deine Klickkraft. Kaufe jedes Upgrade so oft du möchtest.</p>
+      <div class="grid" id="manualShop"></div>
+    </div>
+    <div class="panel">
+      <h2>Automatische Upgrades</h2>
+      <p class="muted">Verstärke die Produktion deiner Geldmaschinen. Die Einkommensboni werden addiert.</p>
+      <div class="grid" id="autoShop"></div>
+    </div>
+  </section>
+
+  <section class="view" id="factory">
+    <div class="panel">
+      <h2>Gebäude & Fabriken</h2>
+      <p class="muted">Gebäude produzieren Geld. Mehrere Käufe desselben Gebäudes sind möglich. Forschung und Weltboni verbessern ihre Produktion.</p>
+      <div class="grid" id="buildingShop"></div>
+    </div>
+  </section>
+
+  <section class="view" id="research">
+    <div class="panel">
+      <div class="row">
+        <h2>Permanenter Forschungsbaum</h2>
+        <span class="pill good" id="researchCurrency">0 Kristalle</span>
+      </div>
+      <p class="muted">Forschung bleibt nach einem Rebirth erhalten. Jede Stufe wird teurer, während der Bonus wächst.</p>
+      <div class="grid" id="researchShop"></div>
+    </div>
+  </section>
+
+  <section class="view" id="collection">
+    <div class="panel">
+      <h2>Capybara-Sammlung</h2>
+      <p class="muted">Schalte neue Skins durch deinen Fortschritt frei. Jeder Skin besitzt einen eigenen Einkommensbonus.</p>
+      <div class="grid" id="skinShop"></div>
+    </div>
+    <div class="panel">
+      <h2>Welten & Galaxien</h2>
+      <p class="muted">Jede Welt hat einen eigenen Produktionsbonus. Neue Gebiete werden durch deinen gesamten Verdienst freigeschaltet.</p>
+      <div class="grid" id="worldShop"></div>
+    </div>
+  </section>
+
+  <section class="view" id="missions">
+    <div class="panel">
+      <h2>Erfolge</h2>
+      <p class="muted">Erfolge werden automatisch freigeschaltet und geben einmalige Kristalle.</p>
+      <div class="grid" id="achievementList"></div>
+    </div>
+    <div class="panel">
+      <h2>Missionen</h2>
+      <p class="muted">Erfülle Ziele und hole dir die Belohnung ab. Jede Mission kann einmal abgeschlossen werden.</p>
+      <div class="grid" id="missionList"></div>
+    </div>
+    <div class="panel">
+      <h2>Statistik</h2>
+      <div class="stats">
+        <div class="stat"><span>Klicks</span><strong id="statClicks">0</strong></div>
+        <div class="stat"><span>Gekaufte Upgrades</span><strong id="statUpgrades">0</strong></div>
+        <div class="stat"><span>Gebäude</span><strong id="statBuildings">0</strong></div>
+        <div class="stat"><span>Abgeschlossene Herausforderungen</span><strong id="statChallenges">0</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="row">
+      <div>
+        <h2>Spielstand</h2>
+        <p class="muted">Dein Fortschritt wird automatisch in diesem Browser gespeichert.</p>
+      </div>
+      <button class="danger" onclick="resetGame()">Zurücksetzen</button>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const SAVE_KEY = "capybaraEmpire_v1";
+const MAX_OFFLINE_SECONDS = 7 * 24 * 60 * 60;
+
+const manualItems = [
+  ["Bessere Finger",25,1],
+  ["Klick-Training",150,5],
+  ["Schnelle Hände",900,25],
+  ["Klick-Profi",5000,125],
+  ["Goldener Finger",30000,650],
+  ["Klick-Meister",180000,3500],
+  ["Turbo-Klick",1100000,20000],
+  ["Super-Klick",7000000,125000],
+  ["Mega-Klick",45000000,800000],
+  ["Ultra-Klick",300000000,5000000],
+  ["Kosmischer Klick",2200000000,35000000],
+  ["Universums-Klick",18000000000,250000000]
+];
+
+const autoItems = [
+  ["Kleine Geldmaschine",100,1],
+  ["Mini-Fabrik",600,5],
+  ["Capybara-Farm",3500,25],
+  ["Geld-Fabrik",22000,150],
+  ["Große Fabrik",140000,900],
+  ["Goldmine",900000,6000],
+  ["Mega-Fabrik",6000000,40000],
+  ["Roboter-Armee",40000000,300000],
+  ["Industrie-Imperium",280000000,2200000],
+  ["Weltraum-Fabrik",2000000000,18000000],
+  ["Galaxie-Imperium",16000000000,150000000],
+  ["Universums-Maschine",130000000000,1300000000]
+];
+
+const buildings = [
+  {id:"farm",name:"Capybara-Farm",desc:"Eine zuverlässige kleine Geldquelle.",cost:500,rate:3},
+  {id:"workshop",name:"Werkstatt",desc:"Produziert mehr als eine Farm.",cost:5000,rate:35},
+  {id:"factory",name:"Fabrik",desc:"Industrielle Produktion.",cost:60000,rate:500},
+  {id:"mine",name:"Kristallmine",desc:"Eine Geldmaschine, die in seltenen Gebieten steht.",cost:900000,rate:8000},
+  {id:"lab",name:"Forschungslabor",desc:"Hochmoderne Produktionsanlagen.",cost:18000000,rate:180000},
+  {id:"space",name:"Raumstation",desc:"Produktion außerhalb der Erde.",cost:600000000,rate:7000000},
+  {id:"galaxy",name:"Galaxien-Motor",desc:"Verwandelt kosmische Energie in Geld.",cost:50000000000,rate:700000000}
+];
+
+const research = [
+  {id:"click",name:"Effizientere Klicks",desc:"+25 % Klickkraft pro Stufe.",cost:2,max:20},
+  {id:"production",name:"Produktionsforschung",desc:"+20 % automatische Produktion pro Stufe.",cost:3,max:25},
+  {id:"offline",name:"Offline-Optimierung",desc:"+5 Prozentpunkte Offline-Einkommen pro Stufe.",cost:4,max:10},
+  {id:"crystal",name:"Kristallkunde",desc:"+10 % Kristalle aus Rebirths pro Stufe.",cost:8,max:10},
+  {id:"world",name:"Welten-Technologie",desc:"+15 % Weltbonus pro Stufe.",cost:10,max:10},
+  {id:"boost",name:"Karotten-Extrakt",desc:"Karotten-Boost hält pro Stufe länger.",cost:5,max:10}
+];
+
+const skins = [
+  {id:"normal",name:"Wiesen-Capybara",desc:"Dein klassisches Capybara.",threshold:0,bonus:1,color:"#bd8a5a"},
+  {id:"gold",name:"Gold-Capybara",desc:"+10 % auf alle Einnahmen.",threshold:100000,bonus:1.1,color:"#e8bd50"},
+  {id:"forest",name:"Wald-Capybara",desc:"+20 % auf alle Einnahmen.",threshold:10000000,bonus:1.2,color:"#669c69"},
+  {id:"ice",name:"Eis-Capybara",desc:"+30 % auf alle Einnahmen.",threshold:1000000000,bonus:1.3,color:"#91d9e7"},
+  {id:"lava",name:"Lava-Capybara",desc:"+50 % auf alle Einnahmen.",threshold:100000000000,bonus:1.5,color:"#e77b51"},
+  {id:"cosmic",name:"Kosmos-Capybara",desc:"+100 % auf alle Einnahmen.",threshold:10000000000000,bonus:2,color:"#a99bff"}
+];
+
+const worlds = [
+  {id:"meadow",name:"Grüne Wiese",desc:"Deine Heimat.",threshold:0,mult:1},
+  {id:"forest",name:"Tiefe Wälder",desc:"Neue Produktionsmöglichkeiten.",threshold:100000,mult:1.5},
+  {id:"desert",name:"Goldene Wüste",desc:"Sonne und seltene Rohstoffe.",threshold:10000000,mult:2.5},
+  {id:"ice",name:"Eisplanet",desc:"Kalte Welt, enorme Energie.",threshold:1000000000,mult:5},
+  {id:"moon",name:"Mondkolonie",desc:"Die Industrie verlässt die Erde.",threshold:100000000000,mult:10},
+  {id:"galaxy",name:"Ferne Galaxie",desc:"Eine völlig neue Größenordnung.",threshold:10000000000000,mult:25}
+];
+
+const achievements = [
+  {id:"click10",name:"Erste Schritte",desc:"Klicke 10-mal.",test:g=>g.clicks>=10,reward:1},
+  {id:"click1000",name:"Klickmaschine",desc:"Klicke 1.000-mal.",test:g=>g.clicks>=1000,reward:3},
+  {id:"money1k",name:"Tausendär",desc:"Verdiene insgesamt 1.000 Geld.",test:g=>g.total>=1000,reward:1},
+  {id:"money1m",name:"Millionär",desc:"Verdiene insgesamt eine Million Geld.",test:g=>g.total>=1000000,reward:5},
+  {id:"buy25",name:"Einkaufsprofi",desc:"Kaufe 25 Upgrades.",test:g=>g.totalUpgrades>=25,reward:3},
+  {id:"build10",name:"Fabrikchef",desc:"Besitze insgesamt 10 Gebäude.",test:g=>buildingTotal(g)>=10,reward:4},
+  {id:"rebirth1",name:"Neuanfang",desc:"Führe einen Rebirth durch.",test:g=>g.rebirths>=1,reward:3},
+  {id:"rebirth10",name:"Immer wieder",desc:"Führe 10 Rebirths durch.",test:g=>g.rebirths>=10,reward:10},
+  {id:"world3",name:"Weltenbummler",desc:"Schalte die dritte Welt frei.",test:g=>g.unlockedWorlds.includes("desert"),reward:5},
+  {id:"challenge1",name:"Herausforderer",desc:"Schließe eine Herausforderung ab.",test:g=>g.challenges>=1,reward:3}
+];
+
+const missions = [
+  {id:"m_clicks",name:"Warmlaufen",desc:"Klicke 50-mal.",reward:100,goal:g=>g.clicks>=50},
+  {id:"m_money",name:"Erste Ersparnisse",desc:"Verdiene insgesamt 5.000 Geld.",reward:250,goal:g=>g.total>=5000},
+  {id:"m_auto",name:"Automatisierung",desc:"Kaufe 5 automatische Upgrades.",reward:500,goal:g=>countType(g,"auto")>=5},
+  {id:"m_build",name:"Grundstein",desc:"Kaufe 3 Gebäude.",reward:1000,goal:g=>buildingTotal(g)>=3},
+  {id:"m_rebirth",name:"Zweiter Anlauf",desc:"Führe einen Rebirth durch.",reward:3,crystals:true,goal:g=>g.rebirths>=1},
+  {id:"m_world",name:"Neue Horizonte",desc:"Schalte die zweite Welt frei.",reward:2000,goal:g=>g.unlockedWorlds.includes("forest")}
+];
+
+function freshGame(){
+  return {
+    money:0,total:0,crystals:0,spentCrystals:0,multiplier:1,rebirths:0,
+    clicks:0,totalUpgrades:0,upgradeCounts:{},buildingCounts:{},
+    researchLevels:{},unlockedSkins:["normal"],selectedSkin:"normal",
+    unlockedWorlds:["meadow"],selectedWorld:"meadow",
+    claimedAchievements:[],claimedMissions:[],challenges:0,
+    challenge:null,feedUntil:0,lastSeen:Date.now()
+  };
+}
+
+let game = freshGame();
+try{
+  const raw=JSON.parse(localStorage.getItem(SAVE_KEY));
+  if(raw && typeof raw==="object") game={...freshGame(),...raw};
+}catch(e){}
+
+game.upgradeCounts=game.upgradeCounts||{};
+game.buildingCounts=game.buildingCounts||{};
+game.researchLevels=game.researchLevels||{};
+game.unlockedSkins=game.unlockedSkins||["normal"];
+game.unlockedWorlds=game.unlockedWorlds||["meadow"];
+game.claimedAchievements=game.claimedAchievements||[];
+game.claimedMissions=game.claimedMissions||[];
+
+const num=n=>Number.isFinite(Number(n))?Math.max(0,Number(n)):0;
+game.money=num(game.money);
+game.total=num(game.total);
+game.crystals=num(game.crystals);
+game.spentCrystals=num(game.spentCrystals);
+game.multiplier=Math.max(1,num(game.multiplier));
+game.rebirths=num(game.rebirths);
+game.clicks=num(game.clicks);
+game.totalUpgrades=num(game.totalUpgrades);
+
+const fmt=n=>{
+  n=Math.max(0,Number(n)||0);
+  if(n<1000000)return Math.floor(n).toLocaleString("de-DE");
+  return new Intl.NumberFormat("de-DE",{notation:"compact",maximumFractionDigits:2}).format(n);
+};
+const fmtRate=n=>fmt(n)+"/s";
+const keyCount=(obj,key)=>Math.max(0,Number(obj[key])||0);
+const totalSpentCrystals=()=>game.spentCrystals||0;
+
+function countType(g,type){
+  return Object.keys(g.upgradeCounts).filter(k=>k.startsWith(type+"_"))
+    .reduce((s,k)=>s+num(g.upgradeCounts[k]),0);
+}
+function buildingTotal(g){
+  return Object.values(g.buildingCounts).reduce((s,n)=>s+num(n),0);
+}
+function researchLevel(id){return keyCount(game.researchLevels,id);}
+function skinData(){return skins.find(s=>s.id===game.selectedSkin)||skins[0];}
+function worldData(){return worlds.find(w=>w.id===game.selectedWorld)||worlds[0];}
+
+function unlockProgress(){
+  skins.forEach(s=>{
+    if(game.total>=s.threshold && !game.unlockedSkins.includes(s.id)){
+      game.unlockedSkins.push(s.id);
+      toast("Neuer Skin freigeschaltet: "+s.name);
+    }
+  });
+  worlds.forEach(w=>{
+    if(game.total>=w.threshold && !game.unlockedWorlds.includes(w.id)){
+      game.unlockedWorlds.push(w.id);
+      toast("Neue Welt freigeschaltet: "+w.name);
+    }
+  });
+}
+
+function researchMultiplier(){
+  return 1+researchLevel("production")*.2;
+}
+function clickMultiplier(){
+  return 1+researchLevel("click")*.25;
+}
+function offlineMultiplier(){
+  return Math.min(1,.5+researchLevel("offline")*.05);
+}
+function worldMultiplier(){
+  return worldData().mult*(1+researchLevel("world")*.15);
+}
+function skinMultiplier(){
+  return skinData().bonus;
+}
+function globalMultiplier(){
+  return game.multiplier*worldMultiplier()*skinMultiplier();
+}
+function boostMultiplier(){
+  return Date.now()<game.feedUntil?2:1;
+}
+function manualBase(){
+  let n=1;
+  manualItems.forEach((it,i)=>n+=it[2]*keyCount(game.upgradeCounts,"manual_"+i));
+  return n;
+}
+function autoBase(){
+  let n=0;
+  autoItems.forEach((it,i)=>n+=it[2]*keyCount(game.upgradeCounts,"auto_"+i));
+  buildings.forEach(b=>n+=b.rate*keyCount(game.buildingCounts,b.id));
+  return n;
+}
+function clickPower(){
+  return manualBase()*clickMultiplier()*globalMultiplier()*boostMultiplier();
+}
+function income(){
+  return autoBase()*researchMultiplier()*globalMultiplier()*boostMultiplier();
+}
+function earn(amount){
+  amount=Math.max(0,amount);
+  game.money+=amount;
+  game.total+=amount;
+}
+
+let toastTimer;
+function toast(message){
+  const el=document.getElementById("toast");
+  if(el)el.textContent=message;
+  say(message);
+}
+function say(message){
+  const el=document.getElementById("message");
+  if(el)el.textContent=message;
+}
+
+function saveGame(){
+  game.lastSeen=Date.now();
+  try{
+    localStorage.setItem(SAVE_KEY,JSON.stringify(game));
+    document.getElementById("saveStatus").textContent="Gespeichert";
+  }catch(e){
+    document.getElementById("saveStatus").textContent="Speichern fehlgeschlagen";
+  }
+}
+
+function buyRepeatUpgrade(type,index){
+  const items=type==="manual"?manualItems:autoItems;
+  const item=items[index];
+  if(!item||game.money<item[1])return;
+  game.money-=item[1];
+  const key=type+"_"+index;
+  game.upgradeCounts[key]=keyCount(game.upgradeCounts,key)+1;
+  game.totalUpgrades++;
+  say(item[0]+" gekauft. Besitz: "+game.upgradeCounts[key]);
+  afterAction();
+}
+function buyBuilding(id){
+  const b=buildings.find(x=>x.id===id);
+  if(!b||game.money<b.cost)return;
+  game.money-=b.cost;
+  game.buildingCounts[id]=keyCount(game.buildingCounts,id)+1;
+  game.totalUpgrades++;
+  say(b.name+" gekauft.");
+  afterAction();
+}
+function buyResearch(r){
+  const level=researchLevel(r.id);
+  const cost=r.cost*(level+1);
+  if(level>=r.max||game.crystals<cost)return;
+  game.crystals-=cost;
+  game.spentCrystals+=cost;
+  game.researchLevels[r.id]=level+1;
+  say("Forschung verbessert: "+r.name);
+  afterAction();
+}
+function afterAction(){
+  unlockProgress();
+  checkAchievements();
+  render();
+  saveGame();
+}
+
+function feed(){
+  if(game.money<50||Date.now()<game.feedUntil)return;
+  game.money-=50;
+  const duration=30000*(1+researchLevel("boost")*.2);
+  game.feedUntil=Date.now()+duration;
+  say("Karotten-Boost aktiviert!");
+  afterAction();
+}
+
+function crystalReward(){
+  const base=Math.floor(Math.sqrt(game.total/1000000));
+  return Math.floor(base*(1+researchLevel("crystal")*.1));
+}
+function rebirth(){
+  const reward=crystalReward();
+  if(reward<1){
+    say("Verdiene insgesamt mindestens 1.000.000 Geld für deinen ersten Kristall.");
+    return;
+  }
+  if(!confirm("Rebirth durchführen?\n\nDu erhältst "+fmt(reward)+
+    " Kristalle. Geld und normale Upgrades werden zurückgesetzt."))return;
+
+  game.crystals+=reward;
+  game.rebirths++;
+  game.money=0;
+  game.upgradeCounts={};
+  game.buildingCounts={};
+  game.totalUpgrades=0;
+  game.feedUntil=0;
+  game.challenge=null;
+  say("Rebirth abgeschlossen! +"+fmt(reward)+" Kristalle.");
+  afterAction();
+}
+
+function buyWorld(id){
+  if(!game.unlockedWorlds.includes(id))return;
+  game.selectedWorld=id;
+  say("Welt gewechselt: "+worldData().name);
+  afterAction();
+}
+function selectSkin(id){
+  if(!game.unlockedSkins.includes(id))return;
+  game.selectedSkin=id;
+  say("Skin ausgewählt: "+skinData().name);
+  afterAction();
+}
+
+function startChallenge(){
+  if(game.challenge){
+    say("Eine Herausforderung läuft bereits.");
+    return;
+  }
+  game.challenge={start:Date.now(),duration:60000,startMoney:game.money,
+    startClicks:game.clicks,goal:100,claimed:false};
+  say("Herausforderung gestartet: Verdiene 100 Klicks in 60 Sekunden!");
+  render();
+  saveGame();
+}
+function updateChallenge(){
+  if(!game.challenge)return;
+  const c=game.challenge;
+  const remaining=Math.max(0,c.duration-(Date.now()-c.start));
+  const clickGoal=game.clicks-c.startClicks>=c.goal;
+  if(clickGoal&&remaining>0){
+    game.challenge=null;
+    game.challenges++;
+    game.crystals+=2;
+    earn(5000);
+    toast("Herausforderung geschafft! +2 Kristalle und 5.000 Geld.");
+    checkAchievements();
+    saveGame();
+  }else if(remaining<=0){
+    game.challenge=null;
+    say("Herausforderung vorbei. Du kannst es erneut versuchen.");
+    saveGame();
+  }
+}
+
+function checkAchievements(){
+  achievements.forEach(a=>{
+    if(!game.claimedAchievements.includes(a.id)&&a.test(game)){
+      game.claimedAchievements.push(a.id);
+      game.crystals+=a.reward;
+      toast("Erfolg: "+a.name+" (+"+a.reward+" Kristalle)");
+    }
+  });
+}
+function claimMission(m){
+  if(game.claimedMissions.includes(m.id)||!m.goal(game))return;
+  game.claimedMissions.push(m.id);
+  if(m.crystals)game.crystals+=m.reward;
+  else earn(m.reward);
+  say("Mission abgeschlossen: "+m.name);
+  afterAction();
+}
+
+function showView(id){
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===id));
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===id));
+  render();
+}
+document.querySelectorAll(".nav button").forEach(b=>{
+  b.addEventListener("click",()=>showView(b.dataset.view));
+});
+
+document.getElementById("capyButton").addEventListener("click",()=>{
+  const amount=clickPower();
+  earn(amount);
+  game.clicks++;
+  unlockProgress();
+  checkAchievements();
+  updateChallenge();
+  render();
+  saveGame();
+});
+
+function card(title,desc,costText,buttonText,disabled,action,extra=""){
+  const el=document.createElement("article");
+  el.className="item";
+  const h=document.createElement("h3");h.textContent=title;
+  const d=document.createElement("p");d.textContent=desc;
+  const c=document.createElement("div");c.className="cost";c.textContent=costText;
+  el.append(h,d);
+  if(extra){const x=document.createElement("div");x.className="owned";x.textContent=extra;el.append(x);}
+  el.append(c);
+  const b=document.createElement("button");b.textContent=buttonText;b.disabled=disabled;
+  b.addEventListener("click",action);
+  el.append(b);
+  return el;
+}
+function fillShop(id,items,type){
+  const grid=document.getElementById(id);grid.replaceChildren();
+  items.forEach((it,i)=>{
+    const count=keyCount(game.upgradeCounts,type+"_"+i);
+    const desc=type==="manual"?"+"+fmt(it[2])+" Grund-Geld pro Klick":
+      "+"+fmt(it[2])+" Grund-Geld pro Sekunde";
+    grid.append(card(it[0],desc,"Preis: "+fmt(it[1]),
+      game.money>=it[1]?"Kaufen":"Zu teuer",game.money<it[1],
+      ()=>buyRepeatUpgrade(type,i),"Besitzt du: "+fmt(count)));
+  });
+}
+function renderBuildings(){
+  const grid=document.getElementById("buildingShop");grid.replaceChildren();
+  buildings.forEach(b=>{
+    const count=keyCount(game.buildingCounts,b.id);
+    grid.append(card(b.name,b.desc+" Produktion: "+fmtRate(b.rate),
+      "Preis pro Kauf: "+fmt(b.cost),game.money>=b.cost?"Kaufen":"Zu teuer",
+      game.money<b.cost,()=>buyBuilding(b.id),"Besitzt du: "+fmt(count)));
+  });
+}
+function renderResearch(){
+  const grid=document.getElementById("researchShop");grid.replaceChildren();
+  document.getElementById("researchCurrency").textContent=fmt(game.crystals)+" Kristalle";
+  research.forEach(r=>{
+    const level=researchLevel(r.id),cost=r.cost*(level+1);
+    grid.append(card(r.name,r.desc+" Stufe "+level+"/"+r.max,
+      level>=r.max?"Maximalstufe":"Kosten: "+fmt(cost)+" Kristalle",
+      level>=r.max?"Maximal":game.crystals>=cost?"Forschen":"Zu wenig Kristalle",
+      level>=r.max||game.crystals<cost,()=>buyResearch(r)));
+  });
+}
+function renderSkins(){
+  const grid=document.getElementById("skinShop");grid.replaceChildren();
+  skins.forEach(s=>{
+    const unlocked=game.unlockedSkins.includes(s.id);
+    const el=card(s.name,s.desc,"Freischaltung: "+fmt(s.threshold)+" Gesamtverdienst",
+      !unlocked?"Gesperrt":game.selectedSkin===s.id?"Ausgewählt":"Auswählen",
+      !unlocked||game.selectedSkin===s.id,()=>selectSkin(s.id),
+      "Einkommensbonus: x"+s.bonus);
+    el.classList.add("skin-card");
+    if(game.selectedSkin===s.id)el.classList.add("selected");
+    grid.append(el);
+  });
+}
+function renderWorlds(targetId){
+  const grid=document.getElementById(targetId);grid.replaceChildren();
+  worlds.forEach(w=>{
+    const unlocked=game.unlockedWorlds.includes(w.id);
+    const selected=game.selectedWorld===w.id;
+    const el=card(w.name,w.desc,"Gesamtverdienst: "+fmt(w.threshold),
+      !unlocked?"Gesperrt":selected?"Aktive Welt":"Reisen",
+      !unlocked||selected,()=>buyWorld(w.id),
+      "Produktionsbonus: x"+w.mult);
+    el.classList.add("world-card");
+    if(selected)el.classList.add("selected");
+    grid.append(el);
+  });
+}
+function renderAchievements(){
+  const grid=document.getElementById("achievementList");grid.replaceChildren();
+  achievements.forEach(a=>{
+    const done=game.claimedAchievements.includes(a.id);
+    const reached=a.test(game);
+    grid.append(card(a.name,a.desc,
+      done?"Belohnung erhalten":"Belohnung: "+a.reward+" Kristalle",
+      done?"Abgeschlossen":reached?"Wird freigeschaltet":"Noch offen",
+      true,()=>{},done?"Erledigt":reached?"Freigeschaltet":"In Arbeit"));
+  });
+}
+function renderMissions(){
+  const grid=document.getElementById("missionList");grid.replaceChildren();
+  missions.forEach(m=>{
+    const done=game.claimedMissions.includes(m.id);
+    const ready=m.goal(game);
+    grid.append(card(m.name,m.desc,
+      "Belohnung: "+fmt(m.reward)+(m.crystals?" Kristalle":" Geld"),
+      done?"Abgeschlossen":ready?"Belohnung abholen":"Noch nicht erfüllt",
+      done||!ready,()=>claimMission(m),done?"Abgeschlossen":ready?"Ziel erreicht":"Ziel offen"));
+  });
+}
+function render(){
+  document.getElementById("money").textContent=fmt(game.money);
+  document.getElementById("clickPower").textContent=fmt(clickPower());
+  document.getElementById("income").textContent=fmtRate(income());
+  document.getElementById("crystals").textContent=fmt(game.crystals);
+  document.getElementById("rebirths").textContent=fmt(game.rebirths);
+  document.getElementById("total").textContent=fmt(game.total);
+  document.getElementById("worldLabel").textContent=worldData().name;
+  document.getElementById("skinLabel").textContent=skinData().name;
+  document.getElementById("boostLabel").textContent=Date.now()<game.feedUntil?
+    "Boost aktiv":"Kein Boost aktiv";
+  document.getElementById("feedButton").disabled=
+    game.money<50||Date.now()<game.feedUntil;
+
+  const gain=crystalReward();
+  document.getElementById("crystalGain").textContent=fmt(gain);
+  document.getElementById("rebirthButton").disabled=gain<1;
+  document.getElementById("rebirthHint").textContent=
+    gain>0?"Dein nächster Rebirth bringt "+fmt(gain)+" Kristalle.":
+    "Du brauchst mindestens 1.000.000 Gesamtverdienst für den ersten Kristall.";
+  document.getElementById("rebirthProgress").style.width=
+    Math.min(100,game.total/1000000*100)+"%";
+
+  const c=game.challenge;
+  if(c){
+    const left=Math.max(0,Math.ceil((c.duration-(Date.now()-c.start))/1000));
+    document.getElementById("challengeInfo").textContent=
+      "Herausforderung läuft: "+left+" Sekunden. Noch "+
+      Math.max(0,c.goal-(game.clicks-c.startClicks))+" Klicks bis zum Ziel.";
+    document.getElementById("challengeButton").textContent="Herausforderung läuft";
+    document.getElementById("challengeButton").disabled=true;
+  }else{
+    document.getElementById("challengeInfo").textContent=
+      "Klicke 100-mal innerhalb von 60 Sekunden. Belohnung: 2 Kristalle und 5.000 Geld.";
+    document.getElementById("challengeButton").textContent="Herausforderung starten";
+    document.getElementById("challengeButton").disabled=false;
+  }
+
+  document.getElementById("statClicks").textContent=fmt(game.clicks);
+  document.getElementById("statUpgrades").textContent=fmt(game.totalUpgrades);
+  document.getElementById("statBuildings").textContent=fmt(buildingTotal(game));
+  document.getElementById("statChallenges").textContent=fmt(game.challenges);
+  document.getElementById("worldHint").textContent=
+    "Aktuelle Welt: "+worldData().name+". Produktionsbonus x"+worldData().mult+
+    ". Neue Welten werden über deinen Gesamtverdienst freigeschaltet.";
+
+  fillShop("manualShop",manualItems,"manual");
+  fillShop("autoShop",autoItems,"auto");
+  renderBuildings();
+  renderResearch();
+  renderSkins();
+  renderWorlds("worldShop");
+  renderWorlds("worldQuick");
+  renderAchievements();
+  renderMissions();
+}
+
+function resetGame(){
+  if(!confirm("Wirklich den gesamten Spielstand einschließlich Kristallen, Forschung und Sammlung löschen?"))return;
+  localStorage.removeItem(SAVE_KEY);
+  game=freshGame();
+  say("Neues Spiel gestartet.");
+  render();
+  saveGame();
+}
+
+// Offline-Einkommen: vor dem Überschreiben des gespeicherten Zeitpunkts berechnen.
+const loadedAt=Date.now();
+const lastSeen=Number(game.lastSeen)||loadedAt;
+const offlineSeconds=Math.max(0,Math.min(MAX_OFFLINE_SECONDS,(loadedAt-lastSeen)/1000));
+const offlineRate=autoBase()*researchMultiplier()*globalMultiplier()*offlineMultiplier();
+const offlineMoney=offlineRate*offlineSeconds;
+if(offlineMoney>0){
+  earn(offlineMoney);
+  say("Willkommen zurück! "+fmt(offlineMoney)+" Offline-Geld aus "+
+      fmt(offlineSeconds/3600)+" Stunden verdient.");
+}
+game.lastSeen=loadedAt;
+
+setInterval(()=>{
+  const amount=income();
+  if(amount>0)earn(amount);
+  updateChallenge();
+  unlockProgress();
+  checkAchievements();
+  render();
+},1000);
+
+setInterval(saveGame,15000);
+window.addEventListener("pagehide",saveGame);
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="hidden")saveGame();
+});
+
+unlockProgress();
+checkAchievements();
+render();
+saveGame();
+</script>
+</body>
+</html>
